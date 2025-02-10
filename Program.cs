@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -24,13 +24,16 @@ class Program
             switch (userInput.ToLower())
             {
                 case "help":
-                    Console.WriteLine("Доступные команды: help - показать справку, exit - выйти из программы, addpeople - добавить людей.");
+                    Console.WriteLine("Доступные команды: help - показать справку, exit - выйти из программы, addpeople - добавить людей, showpeople - показать людей.");
                     break;
                 case "exit":
                     Console.WriteLine("Выход из программы.");
                     return;
                 case var command when command.StartsWith(Value):
                     HandleAddPeopleCommand(userInput);
+                    break;
+                case var command when command.StartsWith("2"):
+                    HandleShowPeopleCommand(userInput);
                     break;
                 default:
                     Console.WriteLine($"Неизвестная команда: {userInput}. Введите 'help' для справки.");
@@ -106,6 +109,45 @@ class Program
         int day = random.Next(1, DateTime.DaysInMonth(year, month) + 1);
 
         return new DateTime(year, month, day);
+    }
+
+    // Команда для вывода людей на экран
+    static void HandleShowPeopleCommand(string command)
+    {
+        var parts = command.Split(' ');
+        if (parts.Length == 2)
+        {
+            if (int.TryParse(parts[1], out int count) && count > 0)
+            {
+                ShowPeople(count);
+            }
+            else
+            {
+                Console.WriteLine("Неверный формат команды или число меньше 1.");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Команда должна содержать один параметр: количество людей для отображения.");
+        }
+    }
+
+    // Вывод информации о людях
+    static void ShowPeople(int count)
+    {
+        if (people.Count == 0)
+        {
+            Console.WriteLine("Справочник людей пуст.");
+            return;
+        }
+
+        var peopleToShow = people.Take(count).ToList();
+
+        for (int i = 0; i < peopleToShow.Count; i++)
+        {
+            var person = peopleToShow[i];
+            Console.WriteLine($"{i + 1}. {person.LastName} {person.FirstName} {person.Patronymic}, {person.BirthDate.ToShortDateString()}, {person.Gender.ToLower()}");
+        }
     }
 
     // Класс для человека
