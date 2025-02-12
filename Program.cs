@@ -24,7 +24,7 @@ class Program
             switch (userInput.ToLower())
             {
                 case "help":
-                    Console.WriteLine("Доступные команды: help - показать справку, exit - выйти из программы, addpeople - добавить людей, showpeople - показать людей.");
+                    Console.WriteLine("Доступные команды: help - показать справку, exit - выйти из программы, addpeople - добавить людей, showpeople - показать людей, search - поиск по фамилии.");
                     break;
                 case "exit":
                     Console.WriteLine("Выход из программы.");
@@ -34,6 +34,9 @@ class Program
                     break;
                 case var command when command.StartsWith("2"):
                     HandleShowPeopleCommand(userInput);
+                    break;
+                case var command when command.StartsWith("3"):
+                    HandleSearchPeopleCommand(userInput);
                     break;
                 default:
                     Console.WriteLine($"Неизвестная команда: {userInput}. Введите 'help' для справки.");
@@ -147,6 +150,40 @@ class Program
         {
             var person = peopleToShow[i];
             Console.WriteLine($"{i + 1}. {person.LastName} {person.FirstName} {person.Patronymic}, {person.BirthDate.ToShortDateString()}, {person.Gender.ToLower()}");
+        }
+    }
+
+    // Команда для поиска людей по фамилии
+    static void HandleSearchPeopleCommand(string command)
+    {
+        var parts = command.Split(' ');
+        if (parts.Length == 2)
+        {
+            string searchTerm = parts[1].ToLower();  // Приводим строку поиска к нижнему регистру
+            SearchPeople(searchTerm);
+        }
+        else
+        {
+            Console.WriteLine("Команда должна содержать один параметр: часть фамилии для поиска.");
+        }
+    }
+
+    // Поиск людей по фамилии
+    static void SearchPeople(string searchTerm)
+    {
+        var foundPeople = people.Where(p => p.LastName.ToLower().Contains(searchTerm)).ToList();
+
+        if (foundPeople.Any())
+        {
+            for (int i = 0; i < foundPeople.Count; i++)
+            {
+                var person = foundPeople[i];
+                Console.WriteLine($"{i + 1}. {person.LastName} {person.FirstName} {person.Patronymic}, {person.BirthDate.ToShortDateString()}, {person.Gender.ToLower()}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Не найдено людей с такой фамилией.");
         }
     }
 
