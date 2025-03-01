@@ -7,8 +7,12 @@ class Program
     private const string Value = "1";
     static List<Person> people = new List<Person>(); // Справочник людей
 
+    public static City? CityOfResidence { get; private set; }
+
     static void Main()
     {
+        CityDatabase.Initialize(); // Инициализируем базу городов в начале
+
         Console.WriteLine("Привет! Введите команду или нажмите Enter для выхода.");
 
         while (true)
@@ -24,12 +28,21 @@ class Program
             switch (userInput.ToLower())
             {
                 case "help":
-                    Console.WriteLine("Доступные команды: help - показать справку, exit - выйти из программы, addpeople - добавить людей, showpeople - показать людей, search - поиск по фамилии.");
+                    Console.WriteLine("Доступные команды: help - показать справку, exit - выйти из программы, 1 - добавить людей, 2 - показать людей, 3 - поиск по фамилии, 11 - список городов.");
                     break;
                 case "exit":
                     Console.WriteLine("Выход из программы.");
                     return;
-                case var command when command.StartsWith(Value):
+                case var command when command.StartsWith("1"):
+                    if (command == "11")
+                    {
+                        CityDatabase.ListCities(); // Вызов команды 11
+                    }
+                    else
+                    {
+                        HandleAddPeopleCommand(userInput); // Остальные команды, начинающиеся с 1
+                    }
+                    break;
                     HandleAddPeopleCommand(userInput);
                     break;
                 case var command when command.StartsWith("2"):
@@ -37,6 +50,9 @@ class Program
                     break;
                 case var command when command.StartsWith("3"):
                     HandleSearchPeopleCommand(userInput);
+                    break;
+                case "11": // Добавляю на всякий случай
+                    CityDatabase.ListCities();
                     break;
                 default:
                     Console.WriteLine($"Неизвестная команда: {userInput}. Введите 'help' для справки.");
@@ -55,7 +71,15 @@ class Program
                 int.TryParse(parts[2], out int minAge) &&
                 int.TryParse(parts[3], out int maxAge))
             {
-                AddPeople(count, minAge, maxAge);
+                // Проверка, что минимальный возраст не больше максимального
+                if (minAge > maxAge)
+                {
+                    Console.WriteLine("Ошибка: минимальный возраст не может быть больше максимального.");
+                }
+                else
+                {
+                    AddPeople(count, minAge, maxAge);
+                }
             }
             else
             {
@@ -72,20 +96,55 @@ class Program
     static void AddPeople(int count, int minAge, int maxAge)
     {
         var random = new Random();
-        List<string> firstNames = new List<string> { "Иван", "Алексей", "Максим", "Дмитрий", "Артур" };
-        List<string> lastNames = new List<string> { "Петров", "Сидоров", "Иванов", "Кузнецов", "Попов" };
-        List<string> patronymics = new List<string> { "Иванович", "Алексеевич", "Максимович", "Дмитриевич", "Артурович" };
+        List<string> firstNamesMale = new List<string> { "Иван", "Алексей", "Максим", "Дмитрий", "Артур" };
+        List<string> lastNamesMale = new List<string> { "Петров", "Сидоров", "Иванов", "Кузнецов", "Попов" };
+
+        List<string> patronymicsMale = new List<string> { "Иванович", "Алексеевич", "Максимович", "Дмитриевич", "Артурович" };
+
+        List<string> firstNamesFemale = new List<string> { "Анна", "Елена", "Ольга", "Татьяна", "Наталья" };
+        List<string> lastNamesFemale = new List<string> { "Петрова", "Сидорова", "Иванова", "Кузнецова", "Попова" };  
+        List<string> patronymicsFemale = new List<string> { "Ивановна", "Алексеевна", "Максимовна", "Дмитриевна", "Артуровна" };
+
         List<string> genders = new List<string> { "Мужской", "Женский" };
+
 
         for (int i = 0; i < count; i++)
         {
-            var firstName = firstNames[random.Next(firstNames.Count)];
-            var lastName = lastNames[random.Next(lastNames.Count)];
-            var patronymic = patronymics[random.Next(patronymics.Count)];
-            var gender = genders[random.Next(genders.Count)];
+            string firstName, lastName, patronymic, gender;
+
+            // Рандомно генерируется гендер
+            if (random.Next(2) == 0) // 0 для Мужчин, 1 для Женщин
+            {
+                firstName = firstNamesMale[random.Next(firstNamesMale.Count)];
+                lastName = lastNamesMale[random.Next(lastNamesMale.Count)];
+                patronymic = patronymicsMale[random.Next(patronymicsMale.Count)];
+                gender = "Мужской";
+            }
+            else
+            {
+                firstName = firstNamesFemale[random.Next(firstNamesFemale.Count)];
+                lastName = lastNamesFemale[random.Next(lastNamesFemale.Count)]; // Используйте список женских фамилий
+                // Убедитесь, что женские отчества используются в женском списке, если имена женские
+                if (firstNamesFemale.Contains(firstName))
+                {
+                    patronymic = patronymicsFemale[random.Next(patronymicsFemale.Count)];
+                }
+                else
+                {
+                    patronymic = patronymicsMale[random.Next(patronymicsMale.Count)]; // По умолчанию используется мужское, если не женское имя
+                }
+                gender = "Женский";
+            }
 
             // Генерация случайной даты рождения в указанном диапазоне
             DateTime birthDate = GenerateRandomBirthDate(minAge, maxAge);
+
+            // Назначить город проживания - или НЕТ
+            City cityOfResidence = null; // По умолчанию: нет города
+            if (random.Next(2) == 0) // 50%-ная вероятность проживания в городе
+            {
+                cityOfResidence = CityDatabase.GetCities()[random.Next(CityDatabase.GetCities().Count)]; // Выберите случайный город
+            }
 
             people.Add(new Person
             {
@@ -93,7 +152,8 @@ class Program
                 LastName = lastName,
                 Patronymic = patronymic,
                 BirthDate = birthDate,
-                Gender = gender
+                Gender = gender,
+                CityOfResidence = cityOfResidence // Назначьте человеку город (или значение null)
             });
         }
 
@@ -187,6 +247,26 @@ class Program
         }
     }
 
+    public static void RunSomeCode(string[] args)
+    {
+        CityDatabase.Initialize();
+
+        // Пример использования базы данных
+        Console.WriteLine("Города в базе данных:");
+        foreach (var city in CityDatabase.GetCities())
+        {
+            Console.WriteLine($"ID: {city.Id}, Name: {city.Name}, Max Population: {city.MaxPopulation:N0}"); // :N0 форматирует число с помощью разделителей в тысячах
+        }
+
+        AddPeople(10, 20, 30); // Добавьте несколько человек
+
+        foreach (var person in people)
+        {
+            string cityInfo = person.CityOfResidence != null ? person.CityOfResidence.Name : "Вне города";
+            Console.WriteLine($"{person.FirstName} {person.LastName} {person.Patronymic}, {person.Gender}, {person.BirthDate.ToShortDateString()}, City: {cityInfo}");
+        }
+    }
+
     // Класс для человека
     class Person
     {
@@ -195,10 +275,98 @@ class Program
         public string Patronymic { get; set; }
         public DateTime BirthDate { get; set; }
         public string Gender { get; set; }
+        public City CityOfResidence { get; set; } // Сейчас это можно обнулить
 
         public override string ToString()
         {
             return $"{LastName} {FirstName} {Patronymic}, {Gender}, Дата рождения: {BirthDate.ToShortDateString()}";
         }
+    }
+
+
+    public class City
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public int MaxPopulation { get; set; }
+        public int CurrentPopulation { get; set; } = 0;  // Инициализировать до 0
+
+        public City(int id, string name, int maxPopulation)
+        {
+            Id = id;
+            Name = name;
+            MaxPopulation = maxPopulation;
+        }
+
+        public override string ToString()
+        {
+            return $"{Id}. {Name}, макс. число жителей - {MaxPopulation:N0}, текущее число жителей - {CurrentPopulation:N0}";
+        }
+    }
+
+    public static class CityDatabase
+    {
+        private static List<City> cities = new List<City>();
+
+        public static List<City> GetCities()
+        {
+            return cities;
+        }
+
+        public static void Initialize()
+        {
+            // Заранее определенное население города (приблизительное, в миллионах)
+            // Они используются для определения максимального числа жителей. Измените их в соответствии с вашими предположениями относительно численности населения каждого города.
+            Dictionary<string, double> cityPopulations = new Dictionary<string, double>
+        {
+            { "Москва", 13.0 },      // ~13 млн
+            { "Санкт-Петербург", 5.6 }, // ~5.6 млн
+            { "Новосибирск", 1.6 },  // ~1.6 млн
+            { "Астана", 1.4 },        // ~1.4 млн
+            { "Караганда", 0.5 }      // ~0.5 млн
+        };
+
+            int idCounter = 1; // Начните вводить идентификаторы городов с 1
+
+            foreach (var cityData in cityPopulations)
+            {
+                string cityName = cityData.Key;
+                double populationMillions = cityData.Value;
+                int maxPopulation = (int)(populationMillions * 1000); // Конвертируйте миллионы в тысячи
+
+                cities.Add(new City(idCounter++, cityName, maxPopulation));
+            }
+        }
+
+        public static City GetCityById(int id)
+        {
+            return cities.FirstOrDefault(c => c.Id == id);
+        }
+
+        public static City GetCityByName(string name)
+        {
+            return cities.FirstOrDefault(c => c.Name == name);
+        }
+
+        public static void AddCity(string name, int maxPopulation)
+        {
+            if (GetCityByName(name) != null)
+            {
+                Console.WriteLine($"Город с таким названием '{name}' уже существует.");
+                return;
+            }
+
+            cities.Add(new City(cities.Count + 1, name, maxPopulation));
+            Console.WriteLine($"Город '{name}' добавлен.");
+        }
+
+        public static void ListCities()
+        {
+            foreach (City city in cities)
+            {
+                Console.WriteLine(city);
+            }
+        }
+
     }
 }
