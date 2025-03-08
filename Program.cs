@@ -36,14 +36,24 @@ class Program
                 case var command when command.StartsWith("1"):
                     if (command == "11")
                     {
-                        CityDatabase.ListCities(); // Вызов команды 11
+                        CityDatabase.ListCities();
+                    }
+                    else if (command.StartsWith("12"))
+                    {
+                        HandleAddCityCommand(command);
+                    }
+                    else if (command.StartsWith("13"))
+                    {
+                        HandleRemoveCityCommand(command);
+                    }
+                    else if (command.StartsWith("14"))
+                    {
+                        HandleListCityResidentsCommand(command);
                     }
                     else
                     {
                         HandleAddPeopleCommand(userInput); // Остальные команды, начинающиеся с 1
                     }
-                    break;
-                    HandleAddPeopleCommand(userInput);
                     break;
                 case var command when command.StartsWith("2"):
                     HandleShowPeopleCommand(userInput);
@@ -53,6 +63,15 @@ class Program
                     break;
                 case "11": // Добавляю на всякий случай
                     CityDatabase.ListCities();
+                    break;
+                case "12":
+                    HandleAddCityCommand("12 "); //Вызовите его с пробелом, чтобы при синтаксическом анализе не возникало ошибок
+                    break;
+                case "13":
+                    HandleRemoveCityCommand("13 ");
+                    break;
+                case "14":
+                    HandleListCityResidentsCommand("14 ");
                     break;
                 default:
                     Console.WriteLine($"Неизвестная команда: {userInput}. Введите 'help' для справки.");
@@ -89,6 +108,88 @@ class Program
         else
         {
             Console.WriteLine("Команда должна содержать 3 параметра: количество людей, минимальный и максимальный возраст.");
+        }
+    }
+
+    static void HandleAddCityCommand(string command)
+    {
+        // Разделите команду пробелами
+        string[] parts = command.Split(' ');
+
+        // Проверьте, достаточно ли параметров у команды
+        if (parts.Length < 3)
+        {
+            Console.WriteLine("Неверный формат команды. Используйте: 12 <Название города> <Максимальное количество жителей>");
+            return;
+        }
+
+        // Получите название города и максимальную численность населения из командных частей
+        string cityName = parts[1];
+        if (!int.TryParse(parts[2], out int maxPopulation))
+        {
+            Console.WriteLine("Неверный формат числа жителей. Введите целое число.");
+            return;
+        }
+
+        // Добавьте город в базу данных
+        CityDatabase.AddCity(cityName, maxPopulation);
+    }
+
+    static void HandleRemoveCityCommand(string command)
+    {
+        string[] parts = command.Split(' ');
+
+        if (parts.Length < 2)
+        {
+            Console.WriteLine("Неверный формат команды. Используйте: 13 <Порядковый номер города>");
+            return;
+        }
+
+        if (!int.TryParse(parts[1], out int cityId))
+        {
+            Console.WriteLine("Неверный формат порядкового номера города. Введите целое число.");
+            return;
+        }
+
+        CityDatabase.RemoveCity(cityId);
+    }
+
+    static void HandleListCityResidentsCommand(string command)
+    {
+        string[] parts = command.Split(' ');
+
+        if (parts.Length < 2)
+        {
+            Console.WriteLine("Неверный формат команды. Используйте: 14 <Порядковый номер города>");
+            return;
+        }
+
+        if (!int.TryParse(parts[1], out int cityId))
+        {
+            Console.WriteLine("Неверный формат порядкового номера города. Введите целое число.");
+            return;
+        }
+
+        City? city = CityDatabase.GetCityById(cityId);
+        if (city == null)
+        {
+            Console.WriteLine($"Город с ID {cityId} не найден.");
+            return;
+        }
+
+        Console.WriteLine($"Жители города {city.Name}:");
+        bool residentsFound = false;
+        foreach (Person person in people)
+        {
+            if (person.CityOfResidence?.Id == cityId)
+            {
+                Console.WriteLine(person);  // Use ToString() from Person class
+                residentsFound = true;
+            }
+        }
+        if (!residentsFound)
+        {
+            Console.WriteLine("Жители не найдены.");
         }
     }
 
@@ -275,10 +376,11 @@ class Program
         public string Patronymic { get; set; }
         public DateTime BirthDate { get; set; }
         public string Gender { get; set; }
-        public City CityOfResidence { get; set; } // Сейчас это можно обнулить
+        public City? CityOfResidence { get; set; } // Сейчас это можно обнулить
 
         public override string ToString()
         {
+            string cityInfo = CityOfResidence != null ? CityOfResidence.Name : "Вне города";
             return $"{LastName} {FirstName} {Patronymic}, {Gender}, Дата рождения: {BirthDate.ToShortDateString()}";
         }
     }
@@ -356,8 +458,26 @@ class Program
                 return;
             }
 
+            int nextId = cities.Count > 0 ? cities.Max(c => c.Id) + 1 : 1; // Определите следующий доступный идентификатор
+
             cities.Add(new City(cities.Count + 1, name, maxPopulation));
             Console.WriteLine($"Город '{name}' добавлен.");
+        }
+
+        public static bool RemoveCity(int cityId)
+        {
+            City cityToRemove = cities.FirstOrDefault(c => c.Id == cityId);
+            if (cityToRemove != null)
+            {
+                cities.Remove(cityToRemove);
+                Console.WriteLine($"City with ID {cityId} removed.");
+                return true;
+            }
+            else
+            {
+                Console.WriteLine($"City with ID {cityId} not found.");
+                return false;
+            }
         }
 
         public static void ListCities()
