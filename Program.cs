@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static Program;
 
 class Program
 {
@@ -50,16 +51,30 @@ class Program
                     {
                         HandleListCityResidentsCommand(command);
                     }
+                    else if (command.StartsWith("15"))
+                    {
+                        HandleAddResidentsToCityCommand(command);
+                    }
                     else
                     {
                         HandleAddPeopleCommand(userInput); // Остальные команды, начинающиеся с 1
                     }
                     break;
                 case var command when command.StartsWith("2"):
-                    HandleShowPeopleCommand(userInput);
+                    if (command == "20")
+                    {
+                        HandleDistributeResidentsCommand();
+                    }
+                    else
+                    {
+                        HandleShowPeopleCommand(userInput);
+                    }
                     break;
                 case var command when command.StartsWith("3"):
                     HandleSearchPeopleCommand(userInput);
+                    break;
+                case var command when command.StartsWith("4"):
+                    HandleAgeStatisticsCommand();
                     break;
                 case "11": // Добавляю на всякий случай
                     CityDatabase.ListCities();
@@ -73,6 +88,12 @@ class Program
                 case "14":
                     HandleListCityResidentsCommand("14 ");
                     break;
+                case "15":
+                    HandleAddResidentsToCityCommand("15 ");
+                    break;
+                case "20":
+                    HandleDistributeResidentsCommand();
+                    break;
                 default:
                     Console.WriteLine($"Неизвестная команда: {userInput}. Введите 'help' для справки.");
                     break;
@@ -81,34 +102,58 @@ class Program
     }
 
     // Команда для добавления людей в справочник
-    static void HandleAddPeopleCommand(string command)
+    static void HandleAddPeopleCommand(string userInput)
     {
-        var parts = command.Split(' ');
-        if (parts.Length == 4)
+        string[] parts = userInput.Split(' ');
+
+        if (parts.Length < 2)
         {
-            if (int.TryParse(parts[1], out int count) &&
-                int.TryParse(parts[2], out int minAge) &&
-                int.TryParse(parts[3], out int maxAge))
+            Console.WriteLine("Неверный формат команды. Используйте: 1 [количество людей] [минимальный возраст] [максимальный возраст] [опционально: ID города]");
+            return;
+        }
+
+        if (!int.TryParse(parts[1], out int count) || count <= 0)
+        {
+            Console.WriteLine("Неверный формат количества людей. Введите положительное целое число.");
+            return;
+        }
+
+        if (!int.TryParse(parts.Length > 2 ? parts[2] : "18", out int minAge) || minAge < 0)
+        {
+            Console.WriteLine("Неверный формат минимального возраста. Введите неотрицательное целое число.");
+            return;
+        }
+
+        if (!int.TryParse(parts.Length > 3 ? parts[3] : "60", out int maxAge) || maxAge < minAge)
+        {
+            Console.WriteLine("Неверный формат максимального возраста. Введите целое число, большее или равное минимальному возрасту.");
+            return;
+        }
+
+        City? city = null;
+        if (parts.Length > 4)
+        {
+            if (!int.TryParse(parts[4], out int cityId))
             {
-                // Проверка, что минимальный возраст не больше максимального
-                if (minAge > maxAge)
-                {
-                    Console.WriteLine("Ошибка: минимальный возраст не может быть больше максимального.");
-                }
-                else
-                {
-                    AddPeople(count, minAge, maxAge);
-                }
+                Console.WriteLine("Неверный формат ID города. Введите целое число.");
+                return;
             }
-            else
+            city = CityDatabase.GetCityById(cityId);
+            if (city == null)
             {
-                Console.WriteLine("Неверный формат команды.");
+                Console.WriteLine($"Город с ID {cityId} не найден.");
+                return;
+            }
+            if (city.CurrentPopulation + count > city.MaxPopulation)
+            {
+                Console.WriteLine($"Невозможно добавить {count} жителей в город {city.Name}. Максимальное количество жителей будет превышено.");
+                return;
             }
         }
-        else
-        {
-            Console.WriteLine("Команда должна содержать 3 параметра: количество людей, минимальный и максимальный возраст.");
-        }
+        // Вызовите фактическую логику добавления людей с указанным городом или без него
+        AddPeople(count, minAge, maxAge, city);
+        Console.WriteLine($"Добавлено {count} человек" + (city != null ? $" в город {city.Name}" : ""));
+
     }
 
     static void HandleAddCityCommand(string command)
@@ -183,7 +228,7 @@ class Program
         {
             if (person.CityOfResidence?.Id == cityId)
             {
-                Console.WriteLine(person);  // Use ToString() from Person class
+                Console.WriteLine(person);  // Используйте toString() из класса Person
                 residentsFound = true;
             }
         }
@@ -194,7 +239,7 @@ class Program
     }
 
     // Добавляем людей в справочник
-    static void AddPeople(int count, int minAge, int maxAge)
+    static void AddPeople(int count, int minAge, int maxAge, City city)
     {
         var random = new Random();
         List<string> firstNamesMale = new List<string> { "Иван", "Алексей", "Максим", "Дмитрий", "Артур" };
@@ -203,7 +248,7 @@ class Program
         List<string> patronymicsMale = new List<string> { "Иванович", "Алексеевич", "Максимович", "Дмитриевич", "Артурович" };
 
         List<string> firstNamesFemale = new List<string> { "Анна", "Елена", "Ольга", "Татьяна", "Наталья" };
-        List<string> lastNamesFemale = new List<string> { "Петрова", "Сидорова", "Иванова", "Кузнецова", "Попова" };  
+        List<string> lastNamesFemale = new List<string> { "Петрова", "Сидорова", "Иванова", "Кузнецова", "Попова" };
         List<string> patronymicsFemale = new List<string> { "Ивановна", "Алексеевна", "Максимовна", "Дмитриевна", "Артуровна" };
 
         List<string> genders = new List<string> { "Мужской", "Женский" };
@@ -213,8 +258,8 @@ class Program
         {
             string firstName, lastName, patronymic, gender;
 
-            // Рандомно генерируется гендер
-            if (random.Next(2) == 0) // 0 для Мужчин, 1 для Женщин
+            // Случайным образом генерируется пол
+            if (random.Next(2) == 0) // 0 для мужчин, 1 для женщин
             {
                 firstName = firstNamesMale[random.Next(firstNamesMale.Count)];
                 lastName = lastNamesMale[random.Next(lastNamesMale.Count)];
@@ -225,6 +270,7 @@ class Program
             {
                 firstName = firstNamesFemale[random.Next(firstNamesFemale.Count)];
                 lastName = lastNamesFemale[random.Next(lastNamesFemale.Count)]; // Используйте список женских фамилий
+
                 // Убедитесь, что женские отчества используются в женском списке, если имена женские
                 if (firstNamesFemale.Contains(firstName))
                 {
@@ -237,42 +283,35 @@ class Program
                 gender = "Женский";
             }
 
-            // Генерация случайной даты рождения в указанном диапазоне
+
+            // Сгенерируйте случайную дату рождения
             DateTime birthDate = GenerateRandomBirthDate(minAge, maxAge);
 
-            // Назначить город проживания - или НЕТ
-            City cityOfResidence = null; // По умолчанию: нет города
-            if (random.Next(2) == 0) // 50%-ная вероятность проживания в городе
-            {
-                cityOfResidence = CityDatabase.GetCities()[random.Next(CityDatabase.GetCities().Count)]; // Выберите случайный город
-            }
-
-            people.Add(new Person
+            Person person = new Person
             {
                 FirstName = firstName,
                 LastName = lastName,
                 Patronymic = patronymic,
                 BirthDate = birthDate,
                 Gender = gender,
-                CityOfResidence = cityOfResidence // Назначьте человеку город (или значение null)
-            });
+                CityOfResidence = city
+            };
+            people.Add(person);
+            city.CurrentPopulation++;
         }
 
-        Console.WriteLine($"Добавлено {count} человек, всего {people.Count} человек.");
+        Console.WriteLine($"Добавлено {count} человек в город {city.Name}, всего {people.Count} человек.");
     }
 
     // Генерация случайной даты рождения
     static DateTime GenerateRandomBirthDate(int minAge, int maxAge)
     {
-        Random random = new Random();
-        int currentYear = DateTime.Now.Year;
-        int minYear = currentYear - maxAge;
-        int maxYear = currentYear - minAge;
-        int year = random.Next(minYear, maxYear);
-        int month = random.Next(1, 13);
-        int day = random.Next(1, DateTime.DaysInMonth(year, month) + 1);
-
-        return new DateTime(year, month, day);
+        var random = new Random();
+        int age = random.Next(minAge, maxAge + 1);
+        DateTime now = DateTime.Now;
+        DateTime startOfYear = new DateTime(now.Year - age, 1, 1);
+        int range = (DateTime.Today - startOfYear).Days;
+        return startOfYear.AddDays(random.Next(range));
     }
 
     // Команда для вывода людей на экран
@@ -329,6 +368,127 @@ class Program
         }
     }
 
+    static void HandleDistributeResidentsCommand()
+    {
+        var random = new Random();
+        List<City> availableCities = CityDatabase.GetCities();
+
+        if (availableCities.Count == 0)
+        {
+            Console.WriteLine("Нет доступных городов для распределения жителей.");
+            return;
+        }
+
+        // Сбросьте текущее население всех городов перед распределением
+        CityDatabase.ResetCityPopulations();
+
+        // Распределите каждого человека по городу случайным образом, учитывая максимальную численность населения
+        foreach (Person person in people)
+        {
+            // Попробуйте присвоить этому человеку город, пока не будет найден тот, который не был переполнен
+            int attempts = 0;
+            while (attempts < availableCities.Count * 2)
+            {
+
+                City chosenCity = availableCities[random.Next(availableCities.Count)]; // Выберите город случайным образом
+                if (chosenCity.CurrentPopulation < chosenCity.MaxPopulation)
+                {
+                    person.CityOfResidence = chosenCity;
+                    chosenCity.CurrentPopulation++;
+                    break; // Человек успешно назначен
+                }
+                attempts++;
+
+            }
+            if (person.CityOfResidence == null)
+            {
+                person.CityOfResidence = null;
+            }
+        }
+
+        Console.WriteLine("Жители перераспределены между городами.");
+        foreach (City city in availableCities)
+        {
+            Console.WriteLine(city);  // Перечислите города.
+        }
+    }
+
+    static void HandleAddResidentsToCityCommand(string command)
+    {
+        string[] parts = command.Split(' ');
+
+        if (parts.Length < 5)
+        {
+            Console.WriteLine("Неверный формат команды. Используйте: 15 <Количество жителей> <Минимальный возраст> <Максимальный возраст> <Порядковый номер города>");
+            return;
+        }
+
+        if (!int.TryParse(parts[1], out int residentCount))
+        {
+            Console.WriteLine("Неверный формат количества жителей. Введите целое число.");
+            return;
+        }
+
+        if (!int.TryParse(parts[2], out int minAge))
+        {
+            Console.WriteLine("Неверный формат минимального возраста. Введите целое число.");
+            return;
+        }
+
+        if (!int.TryParse(parts[3], out int maxAge))
+        {
+            Console.WriteLine("Неверный формат максимального возраста. Введите целое число.");
+            return;
+        }
+
+        if (!int.TryParse(parts[4], out int cityId))
+        {
+            Console.WriteLine("Неверный формат порядкового номера города. Введите целое число.");
+            return;
+        }
+
+        City? city = CityDatabase.GetCityById(cityId);
+        if (city == null)
+        {
+            Console.WriteLine($"Город с ID {cityId} не найден.");
+            return;
+        }
+
+        if (city.CurrentPopulation + residentCount > city.MaxPopulation)
+        {
+            Console.WriteLine($"Невозможно добавить {residentCount} жителей в город {city.Name}. Максимальное количество жителей будет превышено.");
+            return;
+        }
+
+        // Добавьте жителей в город
+        AddPeople(residentCount, minAge, maxAge, city);
+        Console.WriteLine($"В город {city.Name} добавлено {residentCount} жителей.");
+    }
+
+    static void HandleAgeStatisticsCommand()
+    {
+        // Определите возрастные диапазоны
+        List<(int minAge, int maxAge)> ageRanges = new List<(int, int)>
+        {
+            (10, 15),
+            (16, 20),
+            (21, 30),
+            (31, 40),
+            (41, 50),
+            (51, 60),
+            (61, 70),
+            (71, 150)  // До разумного максимального возраста
+        };
+
+        Console.WriteLine("Статистика по возрасту:");
+
+        foreach (var range in ageRanges)
+        {
+            int count = Program.people.Count(p => p.GetAge() >= range.minAge && p.GetAge() <= range.maxAge);
+            Console.WriteLine($"От {range.minAge} до {range.maxAge} лет - {count} человек");
+        }
+    }
+
     // Поиск людей по фамилии
     static void SearchPeople(string searchTerm)
     {
@@ -356,12 +516,13 @@ class Program
         Console.WriteLine("Города в базе данных:");
         foreach (var city in CityDatabase.GetCities())
         {
-            Console.WriteLine($"ID: {city.Id}, Name: {city.Name}, Max Population: {city.MaxPopulation:N0}"); // :N0 форматирует число с помощью разделителей в тысячах
+            Console.WriteLine($"ID: {city.Id}, Name: {city.Name}, Max Population: {city.MaxPopulation:N0}");
         }
 
-        AddPeople(10, 20, 30); // Добавьте несколько человек
+        // Вызовите AddPeople, но укажите город по умолчанию (или null)
+        AddPeople(10, 20, 30, null); // Изначально добавьте несколько человек *за пределами* какого-либо конкретного города
 
-        foreach (var person in people)
+        foreach (var person in Program.people) // Используйте Program.people, а не локальную переменную
         {
             string cityInfo = person.CityOfResidence != null ? person.CityOfResidence.Name : "Вне города";
             Console.WriteLine($"{person.FirstName} {person.LastName} {person.Patronymic}, {person.Gender}, {person.BirthDate.ToShortDateString()}, City: {cityInfo}");
@@ -369,19 +530,31 @@ class Program
     }
 
     // Класс для человека
-    class Person
+    public class Person
     {
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Patronymic { get; set; }
         public DateTime BirthDate { get; set; }
         public string Gender { get; set; }
-        public City? CityOfResidence { get; set; } // Сейчас это можно обнулить
+        public City? CityOfResidence { get; set; }
+
+        public int GetAge()
+        {
+            DateTime now = DateTime.Today;
+            int age = now.Year - BirthDate.Year;
+            if (BirthDate > now.AddYears(-age))
+            {
+                age--;
+            }
+            return age;
+        }
+
 
         public override string ToString()
         {
             string cityInfo = CityOfResidence != null ? CityOfResidence.Name : "Вне города";
-            return $"{LastName} {FirstName} {Patronymic}, {Gender}, Дата рождения: {BirthDate.ToShortDateString()}";
+            return $"{FirstName} {LastName} {Patronymic}, {Gender}, {BirthDate.ToShortDateString()}, City: {cityInfo}";
         }
     }
 
@@ -485,6 +658,14 @@ class Program
             foreach (City city in cities)
             {
                 Console.WriteLine(city);
+            }
+        }
+
+        public static void ResetCityPopulations()
+        {
+            foreach (City city in cities)
+            {
+                city.CurrentPopulation = 0;
             }
         }
 
