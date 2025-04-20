@@ -29,7 +29,7 @@ class Program
             switch (userInput.ToLower())
             {
                 case "help":
-                    Console.WriteLine("Доступные команды: help - показать справку, exit - выйти из программы, 1 - добавить людей, 2 - показать людей, 3 - поиск по фамилии, 11 - список городов.");
+                    Console.WriteLine("Доступные команды: help - показать справку, exit - выйти из программы, 1 - добавить людей, 2 - показать людей, 3 - поиск по фамилии, 11 - список городов, 12 - Добавить город, 13 - Удалить город, 14 - Список людей конкретного города, 20 - Перераспределение жителей.");
                     break;
                 case "exit":
                     Console.WriteLine("Выход из программы.");
@@ -51,7 +51,7 @@ class Program
                     {
                         HandleListCityResidentsCommand(command);
                     }
-                    else if (command.StartsWith("15"))
+                    else if (command.StartsWith("1"))
                     {
                         HandleAddResidentsToCityCommand(command);
                     }
@@ -88,8 +88,8 @@ class Program
                 case "14":
                     HandleListCityResidentsCommand("14 ");
                     break;
-                case "15":
-                    HandleAddResidentsToCityCommand("15 ");
+                case "1":
+                    HandleAddResidentsToCityCommand("1 ");
                     break;
                 case "20":
                     HandleDistributeResidentsCommand();
@@ -419,7 +419,7 @@ class Program
 
         if (parts.Length < 5)
         {
-            Console.WriteLine("Неверный формат команды. Используйте: 15 <Количество жителей> <Минимальный возраст> <Максимальный возраст> <Порядковый номер города>");
+            Console.WriteLine("Неверный формат команды. Используйте: 1 <Количество жителей> <Минимальный возраст> <Максимальный возраст> <Порядковый номер города>");
             return;
         }
 
